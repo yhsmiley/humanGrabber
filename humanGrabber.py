@@ -64,15 +64,6 @@ elif which_od == 'yolov4_trt':
         bgr=True,
         engine_path='pytorch_YOLOv4/trt_weights/yolov4_1_608_608.trt'
         )
-elif which_od == 'det2':
-    objDet = Det2(
-        bgr=True,
-        weights= "f2b/det2/weights/faster-rcnn/faster_rcnn_R_50_FPN_3x/model_final_280758.pkl",
-        config= "f2b/det2/configs/COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml",
-        classes_path= 'f2b/det2/configs/coco80.names',
-        thresh=0.5,
-        max_batch_size=4,
-        )
 
 drawer = Drawer()
 stream = cv2.VideoCapture(video_path)
