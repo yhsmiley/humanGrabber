@@ -8,8 +8,8 @@ import argparse
 import itertools
 from pathlib import Path
 
-from drawer_query import Drawer
-from misc import chipper, bb_to_xyminmax
+from utils.drawer import Drawer
+from utils.misc import chipper, bb_to_xyminmax
 
 from pytorch_YOLOv4.yolo import YOLOV4
 from pytorch_YOLOv4.yolo_trt import YOLOV4 as YOLOV4_TRT
@@ -17,29 +17,35 @@ from pytorch_YOLOv4.yolo_trt import YOLOV4 as YOLOV4_TRT
 parser = argparse.ArgumentParser()
 parser.add_argument('--vid_path', help='Video filepaths/streams for \
                     all cameras, e.g.: 0')
-parser.add_argument('--gpu_dev', help='Gpu device number to use. Default: 0', type=int, default=None)
+parser.add_argument('--gpu_dev', help='Gpu device number to use. Default: 1', type=int, default=None)
 parser.add_argument('--od', help='choose object detector to use', default='yolov4', choices=['det2', 'yolov4', 'yolov4_trt'], type=str)
+parser.add_argument('--output', help='path of output directory', default='outFrames', type=str)
 args = parser.parse_args()
 
 video_path = args.vid_path
 which_od = args.od
 
-if args.gpu_dev is None:
+gpu_device = args.gpu_dev
+if gpu_device is None:
     gpus = GPUtil.getAvailable(order='first', maxLoad=1.0, maxMemory=1.0)
-    GPU_DEV = gpus[0]
+    GPU_DEV = gpus[-1]
     print('Setting CUDA_VISIBLE_DEVICES to ', str(GPU_DEV))
     os.environ['CUDA_VISIBLE_DEVICES'] = str(GPU_DEV)
+else:
+    print('Setting CUDA_VISIBLE_DEVICES to ', str(gpu_device))
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_device)
 
-out_dir = Path('./outFrames')
+out_dir = Path(args.output)
 Path.mkdir(out_dir, exist_ok=True)
 assert Path(out_dir).is_dir(), 'out dir not a dir'
 
-if video_path is not None:
-    if video_path.isdigit():
-        video_path = int(video_path)
-        cam_name = 'Webcam{}'.format(video_path)
-    else:
-        cam_name = os.path.basename(video_path)
+assert video_path is not None, 'video path not specified'
+if video_path.isdigit():
+    video_path = int(video_path)
+    cam_name = 'Webcam{}'.format(video_path)
+else:
+    # cam_name = os.path.basename(video_path)
+    cam_name = Path(video_path).stem
 
 print('Video name: {}'.format(cam_name))
 print('Video path: {}'.format(video_path))
@@ -71,7 +77,7 @@ elif which_od == 'det2':
 drawer = Drawer()
 stream = cv2.VideoCapture(video_path)
 show_win_name = 'GRAB YOUR HUMAN'
-# cv2.namedWindow(show_win_name, cv2.WINDOW_NORMAL)
+cv2.namedWindow(show_win_name, cv2.WINDOW_NORMAL)
 
 time.sleep(1.0)
 try:

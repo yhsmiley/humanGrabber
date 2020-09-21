@@ -6,6 +6,5 @@ docker run -it --gpus all \
 	--privileged \
 	-v /dev/:/dev/ \
 	-v /media/data/humanGrabber:/humanGrabber \
+	--user "$(id -u):$(id -g)" \
 	human_grabber
-
-	# --user "$(id -u):$(id -g)" \

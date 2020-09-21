@@ -25,10 +25,13 @@ def wrap_in(frame, bb):
 
 def chipper(frame, bb, intended_height=None):
     bb = wrap_in(frame, bb)
+
     if bb is None or bb == []:
         return None
+
     min_x, min_y, max_x, max_y = bb
     cropped = frame[ min_y:max_y, min_x:max_x]
+    
     if intended_height is not None:
         height, width = cropped.shape[:2]
         ratio = height / float(width)
