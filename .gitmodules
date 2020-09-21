@@ -1,6 +1,0 @@
-[submodule "pytorch_YOLOv4"]
-	path = pytorch_YOLOv4
-	url = https://github.com/yhsmiley/pytorch-YOLOv4.git
-[submodule "det2"]
-	path = det2
-	url = https://github.com/levan92/det2.git
