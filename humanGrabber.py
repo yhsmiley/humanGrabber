@@ -7,6 +7,7 @@ import GPUtil
 import argparse
 import itertools
 from pathlib import Path
+from datetime import datetime
 
 from utils.drawer import Drawer
 from utils.misc import chipper, bb_to_xyminmax
@@ -14,16 +15,20 @@ from utils.misc import chipper, bb_to_xyminmax
 from pytorch_YOLOv4.yolo import YOLOV4
 from pytorch_YOLOv4.yolo_trt import YOLOV4 as YOLOV4_TRT
 
+from utils.videoGet import VideoStream
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--vid_path', help='Video filepaths/streams for \
                     all cameras, e.g.: 0')
 parser.add_argument('--gpu_dev', help='Gpu device number to use. Default: 1', type=int, default=None)
 parser.add_argument('--od', help='choose object detector to use', default='yolov4', choices=['det2', 'yolov4', 'yolov4_trt'], type=str)
 parser.add_argument('--output', help='path of output directory', default='outFrames', type=str)
+parser.add_argument('--record',help='Toggle to save original video',action='store_true')
 args = parser.parse_args()
 
 video_path = args.vid_path
 which_od = args.od
+record_tracks = args.record
 
 gpu_device = args.gpu_dev
 if gpu_device is None:
@@ -44,11 +49,33 @@ if video_path.isdigit():
     video_path = int(video_path)
     cam_name = 'Webcam{}'.format(video_path)
 else:
-    # cam_name = os.path.basename(video_path)
     cam_name = Path(video_path).stem
 
 print('Video name: {}'.format(cam_name))
 print('Video path: {}'.format(video_path))
+
+# check if input video is a videofile
+if Path(video_path).is_file():
+    videoFile = True
+else:
+    videoFile = False
+
+if record_tracks:
+    stream_fp = str(out_dir)
+else:
+    stream_fp = None
+
+stream = VideoStream(
+            cam_name,
+            video_path,
+            queueSize=2,
+            writeDir=stream_fp,
+            reconnectThreshold=1,
+            videoFile=videoFile
+        )
+stream.start()
+vidInfo = stream.init_src()
+# print(f'vid info: {vidInfo}')
 
 if which_od == 'yolov4':
     objDet = YOLOV4( 
@@ -66,17 +93,17 @@ elif which_od == 'yolov4_trt':
         )
 
 drawer = Drawer()
-stream = cv2.VideoCapture(video_path)
 show_win_name = 'GRAB YOUR HUMAN'
 cv2.namedWindow(show_win_name, cv2.WINDOW_NORMAL)
 
-time.sleep(1.0)
+start_whole = time.time()
 try:
     for frame_count in itertools.count():
-        ret, frame = stream.read()
-        frame_draw = copy.deepcopy(frame)
-        if not ret:
+        if stream.stopped:
             break
+
+        frame = stream.read()
+        frame_draw = copy.deepcopy(frame)
 
         dets = objDet.get_detections_dict([frame], classes=['person'])[0]
         # print(dets)
@@ -95,11 +122,17 @@ try:
             break
 
 except KeyboardInterrupt:
-    # print('Avg FPS:', frame_count/(time.time()-start_whole))
+    print('Avg FPS:', frame_count/(time.time()-start_whole))
     print('KeyboardInterrupt:')
     print('Killing FrameGrabber..')
+    cv2.destroyAllWindows()
+    stream.stop()
+    time.sleep(0.5)
     sys.exit()
 
-cv2.destroyAllWindows()
+print('Avg FPS:', frame_count/(time.time()-start_whole))
 print('Killing FrameGrabber..')
+cv2.destroyAllWindows()
+stream.stop()
+time.sleep(0.5)
 sys.exit()
